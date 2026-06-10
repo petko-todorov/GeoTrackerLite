@@ -1,57 +1,107 @@
-import { MapContainer as LeafletMap, TileLayer, useMap } from 'react-leaflet';
-import { useEffect } from 'react';
+import Map, { MapProvider, Marker } from 'react-map-gl/maplibre';
 import { useStore } from '../store/useStore';
-import { useMapEventsHandler } from '../hooks/useMapEventsHandler';
-import 'leaflet/dist/leaflet.css';
+import Compass from './Compass';
+import NavigationControls from './NavigationControls.jsx';
+import { useLocationTracker } from '../hooks/useLocationTracker';
+import 'maplibre-gl/dist/maplibre-gl.css';
 
-function MapEvents() {
-    useMapEventsHandler();
-    return null;
-}
-
-function ZoomLimits() {
-    const map = useMap();
-    useEffect(() => {
-        map.setMinZoom(3);
-        map.setMaxZoom(19);
-    }, [map]);
+function LocationTracker() {
+    useLocationTracker();
     return null;
 }
 
 export default function MapContainer() {
     const center = useStore((state) => state.center);
     const zoom = useStore((state) => state.zoom);
+    const bearing = useStore((state) => state.bearing);
+    const pitch = useStore((state) => state.pitch);
     const activeLayer = useStore((state) => state.activeLayer);
+    const userLocation = useStore((state) => state.userLocation);
+    const setViewState = useStore((state) => state.setViewState);
+
+    const mapStyle =
+        activeLayer === 'osm'
+            ? {
+                  version: 8,
+                  sources: {
+                      'osm-tiles': {
+                          type: 'raster',
+                          tiles: [
+                              'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          ],
+                          tileSize: 256,
+                          attribution: '&copy; OpenStreetMap contributors',
+                      },
+                  },
+                  layers: [
+                      {
+                          id: 'osm-layer',
+                          type: 'raster',
+                          source: 'osm-tiles',
+                          minzoom: 0,
+                          maxzoom: 19,
+                      },
+                  ],
+              }
+            : {
+                  version: 8,
+                  sources: {
+                      'satellite-tiles': {
+                          type: 'raster',
+                          tiles: [
+                              'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+                          ],
+                          tileSize: 256,
+                          attribution: 'Tiles &copy; Esri',
+                      },
+                  },
+                  layers: [
+                      {
+                          id: 'satellite-layer',
+                          type: 'raster',
+                          source: 'satellite-tiles',
+                          minzoom: 0,
+                          maxzoom: 19,
+                      },
+                  ],
+              };
 
     return (
         <div className="w-full h-screen relative">
-            <LeafletMap
-                center={center}
-                zoom={zoom}
-                minZoom={3}
-                maxZoom={19}
-                className="w-full h-full z-0"
-                zoomControl={false}
-            >
-                <ZoomLimits />
-                <MapEvents />
+            <MapProvider>
+                <Map
+                    longitude={center.lng}
+                    latitude={center.lat}
+                    zoom={zoom}
+                    bearing={bearing}
+                    pitch={pitch}
+                    onMove={(evt) => setViewState(evt.viewState)}
+                    style={{ width: '100%', height: '100%' }}
+                    mapStyle={mapStyle}
+                    minZoom={3}
+                    maxZoom={18}
+                    bearingSnap={30}
+                    dragRotate={true}
+                    touchZoomRotate={true}
+                    zoomInertia={0}
+                    pitchInertia={0}
+                    bearingInertia={0}
+                    panInertia={0}
+                >
+                    <LocationTracker />
+                    <Compass />
+                    <NavigationControls />
 
-                {activeLayer === 'osm' ? (
-                    <TileLayer
-                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                        maxZoom={19}
-                        maxNativeZoom={19}
-                    />
-                ) : (
-                    <TileLayer
-                        attribution="Tiles &copy; Esri"
-                        url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-                        maxZoom={19}
-                        maxNativeZoom={19}
-                    />
-                )}
-            </LeafletMap>
+                    {userLocation && (
+                        <Marker
+                            longitude={userLocation.lng}
+                            latitude={userLocation.lat}
+                        >
+                            <div className="w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-lg ring-4 ring-blue-500/30"></div>
+                        </Marker>
+                    )}
+                </Map>
+            </MapProvider>
         </div>
     );
 }
