@@ -1,7 +1,12 @@
+import LayerSwitcher from './components/LayerSwitcher';
+import MapContainer from './components/MapContainer';
+
 function App() {
     return (
         <>
-            <h1 class="text-3xl text-red-500 font-bold underline">Hello</h1>
+            <MapContainer />
+
+            <LayerSwitcher />
         </>
     );
 }
