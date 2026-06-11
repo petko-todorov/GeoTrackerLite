@@ -21,19 +21,22 @@ export function useLocationTracker() {
                 watchId.current = await Geolocation.watchPosition(
                     {
                         enableHighAccuracy: true,
-                        timeout: 10000
+                        timeout: 10000,
+                        fastestInterval: 1000,
+                        interval: 1000
                     },
                     (position) => {
                         if (position) {
-                            const { longitude, latitude } = position.coords;
+                            const { longitude, latitude, heading, speed } = position.coords;
                             const newLocation = { lng: longitude, lat: latitude };
                             
-                            setUserLocation(newLocation);
+                            setUserLocation(newLocation, heading, speed);
 
-                            if (map) {
+                            if (map && isTracking) {
                                 map.easeTo({
                                     center: [longitude, latitude],
-                                    duration: 500
+                                    duration: 1000,
+                                    easing: (t) => t
                                 });
                             }
                         }
